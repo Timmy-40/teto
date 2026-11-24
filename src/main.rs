@@ -25,6 +25,8 @@ Tu tutoies l'utilisateur et tu peux le taquiner gentiment. Si on te pose une vra
 #[serde(default)]
 struct Config {
     api_key: String,
+    /// Adresse de base d'une API compatible OpenAI
+    api_url: String,
     model: String,
     persona: String,
     /// "fr" ou "ja"
@@ -39,7 +41,8 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             api_key: String::new(),
-            model: "gpt-4o-mini".to_string(),
+            api_url: "https://api.groq.com/openai/v1".to_string(),
+            model: "llama-3.3-70b-versatile".to_string(),
             persona: DEFAULT_PERSONA.to_string(),
             reply_lang: "fr".to_string(),
             tts_mode: "system".to_string(),
@@ -108,7 +111,8 @@ fn call_openai(cfg: &Config, hist: &[(String, String)]) -> Result<String, String
         "messages": msgs,
         "temperature": 0.9
     });
-    let resp = ureq::post("https://api.openai.com/v1/chat/completions")
+    let url = format!("{}/chat/completions", cfg.api_url.trim().trim_end_matches('/'));
+    let resp = ureq::post(&url)
         .set("Authorization", &format!("Bearer {}", cfg.api_key.trim()))
         .timeout(Duration::from_secs(60))
         .send_json(body);
@@ -319,7 +323,7 @@ impl TetoApp {
         let (tx, rx) = channel();
         let mut log = Vec::new();
         let first = if cfg.api_key.trim().is_empty() {
-            "Bienvenue ! Ouvre les Réglages pour ajouter ta clé API OpenAI."
+            "Bienvenue ! Ouvre les Réglages pour ajouter ta clé API gratuite."
         } else {
             "Salut ! Écris-moi ou clique sur Micro."
         };
@@ -392,7 +396,7 @@ impl TetoApp {
         if self.cfg.api_key.trim().is_empty() {
             self.log.push(Msg {
                 role: Role::Sys,
-                text: "Ajoute ta clé API OpenAI dans les Réglages.".to_string(),
+                text: "Ajoute ta clé API dans les Réglages.".to_string(),
             });
             self.show_settings = true;
             return;
@@ -847,13 +851,33 @@ impl eframe::App for TetoApp {
             .resizable(true)
             .default_width(460.0)
             .show(ctx, |ui| {
-                ui.label("Clé API OpenAI");
+                ui.label("Fournisseur d'IA (clique pour remplir l'adresse et le modèle)");
+                ui.horizontal(|ui| {
+                    if ui.button("Groq (gratuit)").clicked() {
+                        self.cfg.api_url = "https://api.groq.com/openai/v1".to_string();
+                        self.cfg.model = "llama-3.3-70b-versatile".to_string();
+                    }
+                    if ui.button("Google Gemini (gratuit)").clicked() {
+                        self.cfg.api_url =
+                            "https://generativelanguage.googleapis.com/v1beta/openai".to_string();
+                        self.cfg.model = "gemini-2.5-flash".to_string();
+                    }
+                    if ui.button("OpenAI (payant)").clicked() {
+                        self.cfg.api_url = "https://api.openai.com/v1".to_string();
+                        self.cfg.model = "gpt-4o-mini".to_string();
+                    }
+                });
+                ui.add_space(6.0);
+                ui.label("Clé API");
                 ui.add(
                     egui::TextEdit::singleline(&mut self.cfg.api_key)
                         .password(true)
-                        .hint_text("sk-…")
+                        .hint_text("colle ta clé ici")
                         .desired_width(f32::INFINITY),
                 );
+                ui.add_space(6.0);
+                ui.label("Adresse de l'API");
+                ui.add(egui::TextEdit::singleline(&mut self.cfg.api_url).desired_width(f32::INFINITY));
                 ui.add_space(6.0);
                 ui.label("Modèle");
                 ui.add(egui::TextEdit::singleline(&mut self.cfg.model).desired_width(f32::INFINITY));
