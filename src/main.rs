@@ -42,7 +42,7 @@ impl Default for Config {
         Config {
             api_key: String::new(),
             api_url: "https://api.groq.com/openai/v1".to_string(),
-            model: "llama-3.3-70b-versatile".to_string(),
+            model: "openai/gpt-oss-20b".to_string(),
             persona: DEFAULT_PERSONA.to_string(),
             reply_lang: "fr".to_string(),
             tts_mode: "system".to_string(),
@@ -855,7 +855,7 @@ impl eframe::App for TetoApp {
                 ui.horizontal(|ui| {
                     if ui.button("Groq (gratuit)").clicked() {
                         self.cfg.api_url = "https://api.groq.com/openai/v1".to_string();
-                        self.cfg.model = "llama-3.3-70b-versatile".to_string();
+                        self.cfg.model = "openai/gpt-oss-20b".to_string();
                     }
                     if ui.button("Google Gemini (gratuit)").clicked() {
                         self.cfg.api_url =
